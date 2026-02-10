@@ -76,10 +76,11 @@ const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
+const loggingIn = ref(false)
 const user = useSupabaseUser()
 
 watch(user, (val) => {
-  if (val) navigateTo('/dashboard')
+  if (val && !loggingIn.value) navigateTo('/dashboard')
 }, { immediate: true })
 
 async function handleLogin() {
@@ -89,6 +90,7 @@ async function handleLogin() {
   }
 
   loading.value = true
+  loggingIn.value = true
   errorMsg.value = ''
 
   try {
@@ -104,6 +106,7 @@ async function handleLogin() {
     }
   } finally {
     loading.value = false
+    loggingIn.value = false
   }
 }
 </script>

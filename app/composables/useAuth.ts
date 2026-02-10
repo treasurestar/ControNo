@@ -13,11 +13,25 @@ export function useAuth() {
   async function fetchProfile() {
     if (!user.value?.id) return null
 
-    const { data: profileData } = await supabase
+    let profileData: any = null
+
+    const { data, error } = await supabase
       .from('profiles')
       .select('id,name,email,role,unit_id,approved')
       .eq('id', user.value.id)
       .maybeSingle()
+
+    if (error) {
+      // Fallback: try without approved column (in case it doesn't exist yet)
+      const { data: fallback } = await supabase
+        .from('profiles')
+        .select('id,name,email,role,unit_id')
+        .eq('id', user.value.id)
+        .maybeSingle()
+      profileData = fallback ? { ...fallback, approved: true } : null
+    } else {
+      profileData = data
+    }
 
     let unitName = ''
     if (profileData?.unit_id) {
