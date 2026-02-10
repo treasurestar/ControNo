@@ -11,7 +11,7 @@ export function useAuth() {
   })
 
   async function fetchProfile() {
-    if (!user.value) return null
+    if (!user.value?.id) return null
 
     const { data: profileData } = await supabase
       .from('profiles')
