@@ -32,6 +32,29 @@
             <option value="admin">Admin</option>
           </select>
         </div>
+        <div class="col-span-2 max-sm:col-span-1">
+          <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Nova Senha</label>
+          <div class="relative">
+            <input
+              v-model="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              class="form-input pr-11"
+              placeholder="Deixe vazio para manter a atual"
+              minlength="6"
+            />
+            <button
+              type="button"
+              class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer"
+              style="color: var(--text-secondary);"
+              @click="showPassword = !showPassword"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
         <div class="flex gap-3 col-span-2 max-sm:col-span-1">
           <button type="submit" class="btn-primary flex-1" :disabled="loading">
             {{ loading ? 'Salvando...' : 'Salvar' }}
@@ -54,11 +77,13 @@ const emit = defineEmits(['close', 'updated'])
 
 const { units } = useUnits()
 const loading = ref(false)
+const showPassword = ref(false)
 const form = ref({
   name: '',
   email: '',
   unitName: '',
-  role: 'user'
+  role: 'user',
+  password: ''
 })
 
 watch(() => props.user, (u) => {
@@ -67,8 +92,10 @@ watch(() => props.user, (u) => {
       name: u.name || '',
       email: u.email || '',
       unitName: u.units?.name || '',
-      role: u.role || 'user'
+      role: u.role || 'user',
+      password: ''
     }
+    showPassword.value = false
   }
 }, { immediate: true })
 
@@ -81,7 +108,8 @@ async function handleSubmit() {
       body: {
         name: form.value.name,
         unitName: form.value.unitName,
-        role: form.value.role
+        role: form.value.role,
+        password: form.value.password || undefined
       }
     })
     emit('updated')
