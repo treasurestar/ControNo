@@ -60,19 +60,9 @@
         </button>
       </form>
 
-      <p class="text-center mt-5 text-sm" style="color: var(--text-secondary);">
-        <a
-          href="#"
-          class="font-medium no-underline"
-          style="color: var(--accent-color);"
-          @click.prevent="showRecovery = true"
-        >Esqueci a minha senha</a>
-      </p>
     </div>
 
     <p class="mt-7 text-[13px]" style="color: var(--text-secondary);">Sistema de Controle de Validade</p>
-
-    <RecoveryModal :show="showRecovery" @close="showRecovery = false" />
   </div>
 </template>
 
@@ -86,8 +76,6 @@ const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
-const showRecovery = ref(false)
-
 const user = useSupabaseUser()
 
 watch(user, (val) => {

@@ -10,7 +10,7 @@
         <button
           v-for="tab in tabs"
           :key="tab.id"
-          class="py-2.5 px-4 rounded-lg text-sm cursor-pointer transition-all relative"
+          class="py-2.5 px-4 rounded-lg text-sm cursor-pointer transition-all"
           :style="{
             background: activeTab === tab.id ? 'rgba(139, 115, 85, 0.1)' : 'var(--bg-secondary)',
             border: `1px solid ${activeTab === tab.id ? 'var(--accent-color)' : 'var(--border-color)'}`,
@@ -19,11 +19,6 @@
           @click="activeTab = tab.id"
         >
           {{ tab.label }}
-          <span
-            v-if="tab.id === 'approval' && pendingUsers.length > 0"
-            class="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-[11px] font-bold text-white px-1"
-            style="background: var(--vencido-color);"
-          >{{ pendingUsers.length }}</span>
         </button>
       </div>
     </div>
@@ -104,43 +99,6 @@
               </tr>
               <tr v-if="filteredUsers.length === 0">
                 <td colspan="5" class="text-[13px]" style="color: var(--text-secondary);">Nenhum usuário encontrado.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Approval Tab -->
-    <div v-if="activeTab === 'approval'" class="flex flex-col gap-4">
-      <div class="card">
-        <div class="flex items-center justify-between gap-4 mb-3 flex-wrap">
-          <h3 class="font-semibold" style="color: var(--text-primary);">Usuários aguardando aprovação</h3>
-          <span class="text-[13px]" style="color: var(--text-secondary);">{{ pendingUsers.length }} pendente(s)</span>
-        </div>
-
-        <div class="w-full overflow-x-auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Unidade</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="u in pendingUsers" :key="u.id">
-                <td>{{ u.name || '-' }}</td>
-                <td>{{ u.email || '-' }}</td>
-                <td>{{ u.units?.name || '-' }}</td>
-                <td>
-                  <button class="table-action" style="color: var(--ok-color);" @click="handleApproveUser(u)">Aprovar</button>
-                  <button class="table-action table-action-delete" @click="handleRejectUser(u)">Recusar</button>
-                </td>
-              </tr>
-              <tr v-if="pendingUsers.length === 0">
-                <td colspan="4" class="text-[13px]" style="color: var(--text-secondary);">Nenhum usuário pendente de aprovação.</td>
               </tr>
             </tbody>
           </table>
@@ -359,8 +317,7 @@ const ADMIN_EMAIL = 'admin@controno.com.br'
 
 const tabs = [
   { id: 'users', label: 'Usuários' },
-  { id: 'approval', label: 'Aprovação' },
-  { id: 'units', label: 'Unidades' },
+{ id: 'units', label: 'Unidades' },
   { id: 'reports', label: 'Relatórios' }
 ]
 
@@ -382,10 +339,6 @@ const reportData = ref({
 const userSearch = ref('')
 const userFilterUnit = ref('')
 const userFilterRole = ref('')
-
-const pendingUsers = computed(() => {
-  return users.value.filter(u => !u.approved && u.role !== 'admin')
-})
 
 const filteredUsers = computed(() => {
   let result = users.value
@@ -494,25 +447,6 @@ async function handleDeleteUser(u: Profile) {
     await loadUsers()
   } catch (e: any) {
     alert(e.data?.message || e.message || 'Erro ao excluir usuário.')
-  }
-}
-
-async function handleApproveUser(u: Profile) {
-  try {
-    await $fetch(`/api/admin/profiles/${u.id}/approve`, { method: 'PATCH' })
-    await loadUsers()
-  } catch (e: any) {
-    alert(e.data?.message || e.message || 'Erro ao aprovar usuário.')
-  }
-}
-
-async function handleRejectUser(u: Profile) {
-  if (!confirm(`Deseja recusar e excluir o cadastro de "${u.name || u.email}"?`)) return
-  try {
-    await $fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
-    await loadUsers()
-  } catch (e: any) {
-    alert(e.data?.message || e.message || 'Erro ao recusar usuário.')
   }
 }
 

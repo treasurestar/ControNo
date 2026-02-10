@@ -17,18 +17,20 @@
         </svg>
       </button>
 
-      <img
-        v-if="theme === 'dark'"
-        src="~/assets/img/logo-dark.png"
-        alt="ControNô"
-        class="h-9 w-auto object-contain"
-      />
-      <img
-        v-else
-        src="~/assets/img/logo-light.png"
-        alt="ControNô"
-        class="h-9 w-auto object-contain"
-      />
+      <NuxtLink to="/dashboard" class="inline-flex">
+        <img
+          v-if="theme === 'dark'"
+          src="~/assets/img/logo-dark.png"
+          alt="ControNô"
+          class="h-9 w-auto object-contain"
+        />
+        <img
+          v-else
+          src="~/assets/img/logo-light.png"
+          alt="ControNô"
+          class="h-9 w-auto object-contain"
+        />
+      </NuxtLink>
       <div class="flex flex-col leading-tight">
         <span class="text-xs font-medium" style="color: var(--text-secondary);">{{ unitLabel }}</span>
       </div>
@@ -68,7 +70,7 @@
           <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
           <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        <span>{{ currentProfile?.name || 'Usuário' }}</span>
+        <span>{{ isAdmin ? 'Administrador' : (currentProfile?.name || 'Usuário') }}</span>
       </div>
       <button
         class="py-2 px-4 rounded-md text-sm cursor-pointer transition-all"
