@@ -29,6 +29,7 @@ create table if not exists public.profiles (
     email text unique,
     unit_id uuid references public.units(id) on delete set null,
     role public.user_role not null default 'user',
+    approved boolean not null default false,
     created_at timestamptz not null default now(),
     primary key (id)
 );
@@ -64,8 +65,8 @@ $$ language plpgsql;
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-    insert into public.profiles (id, email, role)
-    values (new.id, new.email, 'user')
+    insert into public.profiles (id, email, role, approved)
+    values (new.id, new.email, 'user', false)
     on conflict (id) do nothing;
     return new;
 end;
@@ -104,6 +105,24 @@ alter table public.units enable row level security;
 alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 
+-- ========== HELPER FUNCTIONS (bypass RLS para evitar recursão) ==========
+
+-- Verifica se o usuário atual é admin (SECURITY DEFINER ignora RLS)
+create or replace function public.is_admin()
+returns boolean as $$
+    select exists (
+        select 1 from public.profiles
+        where id = auth.uid() and role = 'admin'
+    );
+$$ language sql security definer set search_path = public;
+
+-- Retorna o unit_id do usuário atual (SECURITY DEFINER ignora RLS)
+create or replace function public.get_my_unit_id()
+returns uuid as $$
+    select unit_id from public.profiles
+    where id = auth.uid();
+$$ language sql security definer set search_path = public;
+
 -- ===== Policies: UNITS =====
 
 -- Qualquer usuário autenticado pode ver as unidades
@@ -114,44 +133,23 @@ using (auth.uid() is not null);
 
 -- ===== Policies: PROFILES =====
 
--- Usuário vê o próprio perfil
-drop policy if exists profiles_select_own on public.profiles;
-create policy profiles_select_own
-on public.profiles for select
-using (auth.uid() is not null and id = auth.uid());
-
--- Usuário atualiza o próprio perfil
-drop policy if exists profiles_update_own on public.profiles;
-create policy profiles_update_own
-on public.profiles for update
-using (auth.uid() is not null and id = auth.uid());
-
--- Admin vê todos os perfis
-drop policy if exists profiles_select_admin on public.profiles;
-create policy profiles_select_admin
+-- Usuário vê o próprio perfil OU admin vê todos
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select
 on public.profiles for select
 using (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid() and p.role = 'admin'
-    )
+    id = auth.uid() or public.is_admin()
 );
 
--- Admin atualiza qualquer perfil
-drop policy if exists profiles_update_admin on public.profiles;
-create policy profiles_update_admin
+-- Usuário atualiza o próprio perfil OU admin atualiza todos
+drop policy if exists profiles_update on public.profiles;
+create policy profiles_update
 on public.profiles for update
 using (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid() and p.role = 'admin'
-    )
+    id = auth.uid() or public.is_admin()
 )
 with check (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid() and p.role = 'admin'
-    )
+    id = auth.uid() or public.is_admin()
 );
 
 -- ===== Policies: PRODUCTS =====
@@ -161,11 +159,7 @@ drop policy if exists products_select on public.products;
 create policy products_select
 on public.products for select
 using (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid()
-        and (p.role = 'admin' or p.unit_id = products.unit_id)
-    )
+    public.is_admin() or unit_id = public.get_my_unit_id()
 );
 
 -- Insert: admin insere em qualquer unidade, user só na sua
@@ -173,11 +167,7 @@ drop policy if exists products_insert on public.products;
 create policy products_insert
 on public.products for insert
 with check (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid()
-        and (p.role = 'admin' or p.unit_id = products.unit_id)
-    )
+    public.is_admin() or unit_id = public.get_my_unit_id()
 );
 
 -- Update: admin edita qualquer, user só da sua unidade
@@ -185,11 +175,7 @@ drop policy if exists products_update on public.products;
 create policy products_update
 on public.products for update
 using (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid()
-        and (p.role = 'admin' or p.unit_id = products.unit_id)
-    )
+    public.is_admin() or unit_id = public.get_my_unit_id()
 );
 
 -- Delete: admin deleta qualquer, user só da sua unidade
@@ -197,11 +183,7 @@ drop policy if exists products_delete on public.products;
 create policy products_delete
 on public.products for delete
 using (
-    exists (
-        select 1 from public.profiles p
-        where p.id = auth.uid()
-        and (p.role = 'admin' or p.unit_id = products.unit_id)
-    )
+    public.is_admin() or unit_id = public.get_my_unit_id()
 );
 
 -- ========== USUÁRIO ADMIN ==========
@@ -270,8 +252,8 @@ begin
         );
 
         -- Cria perfil admin
-        insert into public.profiles (id, name, email, role)
-        values (admin_uid, 'Administrador', 'admin@controno.com.br', 'admin')
-        on conflict (id) do update set role = 'admin';
+        insert into public.profiles (id, name, email, role, approved)
+        values (admin_uid, 'Administrador', 'admin@controno.com.br', 'admin', true)
+        on conflict (id) do update set role = 'admin', approved = true;
     end if;
 end $$;

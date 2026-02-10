@@ -10,6 +10,7 @@ export interface Profile {
   email: string
   unit_id: string
   role: 'admin' | 'user'
+  approved: boolean
   created_at: string
   units?: { name: string }
 }

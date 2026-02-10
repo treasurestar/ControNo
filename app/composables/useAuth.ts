@@ -15,7 +15,7 @@ export function useAuth() {
 
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('id,name,email,role,unit_id')
+      .select('id,name,email,role,unit_id,approved')
       .eq('id', user.value.id)
       .maybeSingle()
 
@@ -34,6 +34,7 @@ export function useAuth() {
       name: profileData?.name || user.value.user_metadata?.name || 'Usuario',
       email: user.value.email || profileData?.email || '',
       role: profileData?.role || 'user',
+      approved: profileData?.approved ?? false,
       unit_id: profileData?.unit_id || '',
       created_at: profileData?.created_at || '',
       units: { name: unitName }
@@ -46,29 +47,12 @@ export function useAuth() {
   async function login(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    await fetchProfile()
-  }
-
-  async function register(name: string, email: string, unitName: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } }
-    })
-    if (error) throw error
-
-    if (data?.user && data?.session) {
-      const { getUnitIdByName } = useUnits()
-      const unitId = await getUnitIdByName(unitName)
-      if (unitId) {
-        await supabase
-          .from('profiles')
-          .update({ name, unit_id: unitId })
-          .eq('id', data.user.id)
-      }
+    const profile = await fetchProfile()
+    if (profile && !profile.approved && profile.role !== 'admin') {
+      await supabase.auth.signOut()
+      currentProfile.value = null
+      throw new Error('ACCOUNT_PENDING_APPROVAL')
     }
-
-    return data
   }
 
   async function logout() {
@@ -88,7 +72,6 @@ export function useAuth() {
     isAdmin,
     fetchProfile,
     login,
-    register,
     logout,
     resetPassword
   }

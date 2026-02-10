@@ -68,10 +68,6 @@
           @click.prevent="showRecovery = true"
         >Esqueci a minha senha</a>
       </p>
-      <p class="text-center mt-5 text-sm" style="color: var(--text-secondary);">
-        Não tem uma conta?
-        <NuxtLink to="/cadastro" class="font-medium no-underline" style="color: var(--accent-color);">Cadastre-se</NuxtLink>
-      </p>
     </div>
 
     <p class="mt-7 text-[13px]" style="color: var(--text-secondary);">Sistema de Controle de Validade</p>
@@ -112,9 +108,9 @@ async function handleLogin() {
     await login(email.value, password.value)
     await navigateTo('/dashboard')
   } catch (e: any) {
-    const msg = e?.message?.toLowerCase() || ''
-    if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
-      errorMsg.value = 'E-mail não confirmado. Verifique sua caixa de entrada e confirme seu cadastro.'
+    const msg = e?.message || ''
+    if (msg === 'ACCOUNT_PENDING_APPROVAL') {
+      errorMsg.value = 'Sua conta ainda não foi aprovada pelo administrador. Aguarde a aprovação para acessar o sistema.'
     } else {
       errorMsg.value = 'Email ou senha inválidos!'
     }

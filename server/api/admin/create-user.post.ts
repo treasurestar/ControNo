@@ -26,7 +26,8 @@ export default defineEventHandler(async (event) => {
       name: name || null,
       email,
       role: role || 'user',
-      unit_id: unitId
+      unit_id: unitId,
+      approved: true
     })
     .eq('id', data.user.id)
 
