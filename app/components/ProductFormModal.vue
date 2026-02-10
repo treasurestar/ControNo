@@ -20,6 +20,11 @@
             <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.name }}</option>
           </select>
         </div>
+        <!-- Show unit name for regular user (read-only) -->
+        <div v-else class="mb-5">
+          <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Unidade</label>
+          <input :value="userUnitName" type="text" class="form-input opacity-60" disabled />
+        </div>
 
         <div class="mb-5">
           <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Nome do Produto</label>
@@ -63,7 +68,7 @@
 <script setup lang="ts">
 const emit = defineEmits(['close', 'created'])
 
-const { currentProfile, isAdmin } = useAuth()
+const { currentProfile, isAdmin, fetchProfile } = useAuth()
 const { units, selectedUnitId } = useUnits()
 const { addProduct } = useProducts()
 
@@ -80,10 +85,19 @@ const form = ref({
   unitId: ''
 })
 
-// Pre-select unit from header when modal opens
-watch(() => props.show, (open) => {
-  if (open && selectedUnitId.value) {
-    form.value.unitId = selectedUnitId.value
+const userUnitName = computed(() => {
+  const unitId = currentProfile.value?.unit_id
+  if (!unitId) return ''
+  return currentProfile.value?.units?.name || units.value.find(u => u.id === unitId)?.name || ''
+})
+
+// Pre-select unit from header when modal opens + ensure profile is loaded
+watch(() => props.show, async (open) => {
+  if (open) {
+    if (!currentProfile.value) await fetchProfile()
+    if (isAdmin.value && selectedUnitId.value) {
+      form.value.unitId = selectedUnitId.value
+    }
   }
 })
 
@@ -104,7 +118,7 @@ async function handleSubmit() {
     }
 
     if (!unitId) {
-      alert('Selecione uma unidade.')
+      alert(isAdmin.value ? 'Selecione uma unidade.' : 'Sua conta não possui uma unidade atribuída. Contate o administrador.')
       return
     }
 
