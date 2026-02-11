@@ -14,8 +14,8 @@ export function usePrintLabel() {
     const printDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`
     const printTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-    // Page: 70x70mm, margins: top 3mm, left/right 2mm, bottom 2mm
-    const doc = new jsPDF({ unit: 'mm', format: [70, 70] })
+    // Page: 70x70mm landscape, margins: top 3mm, left/right 2mm, bottom 2mm
+    const doc = new jsPDF({ unit: 'mm', format: [70, 70], orientation: 'landscape' })
     const xL = 2, xR = 68, W = 66, xC = 35
     let y = 3
 
@@ -103,41 +103,10 @@ export function usePrintLabel() {
     doc.setTextColor(136, 136, 136)
     doc.text(`Impresso em ${printDate} às ${printTime}`, xC, y, { baseline: 'top', align: 'center' })
 
-    // ── Download PDF + auto-print ──
+    // ── Open PDF in new tab for printing ──
     const pdfBlob = doc.output('blob')
     const pdfUrl = URL.createObjectURL(pdfBlob)
-
-    const safeName = product.name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-
-    // Download
-    const a = document.createElement('a')
-    a.href = pdfUrl
-    a.download = `etiqueta-${safeName}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-
-    // Auto-print via iframe
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;'
-    iframe.src = pdfUrl
-    document.body.appendChild(iframe)
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.focus()
-        iframe.contentWindow?.print()
-        setTimeout(() => {
-          document.body.removeChild(iframe)
-          URL.revokeObjectURL(pdfUrl)
-        }, 1000)
-      }, 100)
-    }
+    window.open(pdfUrl)
   }
 
   return { printLabel }
