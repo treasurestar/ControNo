@@ -14,16 +14,17 @@ export function usePrintLabel() {
     const printDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`
     const printTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-    // Page: 70x70mm landscape, margins: top 3mm, left/right 2mm, bottom 2mm
+    // Page: 70x70mm landscape, margins: 5mm all sides (safe for printer non-printable zone)
     const doc = new jsPDF({ unit: 'mm', format: [70, 70], orientation: 'landscape' })
-    const xL = 2, xR = 68, W = 66, xC = 35
-    let y = 3
+    const mL = 5, mR = 5, mT = 5
+    const xL = mL, xR = 70 - mR, W = 70 - mL - mR, xC = 35
+    let y = mT
 
     const lh = () => doc.getLineHeight() / doc.internal.scaleFactor
 
-    // ── Product Name — 24pt bold ──
+    // ── Product Name — 20pt bold ──
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(24)
+    doc.setFontSize(20)
     doc.setTextColor(0)
     const nameLines = doc.splitTextToSize(product.name.toUpperCase(), W)
     doc.text(nameLines, xL, y, { baseline: 'top' })
@@ -35,9 +36,9 @@ export function usePrintLabel() {
     doc.line(xL, y, xR, y)
     y += 1.5
 
-    // ── Ingredients — 12pt (bold label + normal text inline) ──
+    // ── Ingredients — 10pt (bold label + normal text inline) ──
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(12)
+    doc.setFontSize(10)
     const ingFull = 'INGREDIENTES: ' + ingredientsText
     const ingLines = doc.splitTextToSize(ingFull, W)
     doc.text(ingLines, xL, y, { baseline: 'top' })
@@ -46,7 +47,7 @@ export function usePrintLabel() {
     doc.text('INGREDIENTES: ', xL, y, { baseline: 'top' })
     y += lh() * ingLines.length + 1.5
 
-    // ── Info Table — headers 10pt, values 14pt bold ──
+    // ── Info Table — headers 9pt, values 12pt bold ──
     const colW = W / 3
     doc.setDrawColor(0)
     doc.setLineWidth(0.2)
@@ -56,7 +57,7 @@ export function usePrintLabel() {
 
     // Headers
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setTextColor(0)
     const headers = ['UNIDADE', 'PESO', 'RESP.']
     headers.forEach((h, i) => {
@@ -66,7 +67,7 @@ export function usePrintLabel() {
 
     // Values
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
+    doc.setFontSize(12)
     const values = [unitText, weightText, responsibleText]
     values.forEach((v, i) => {
       doc.text(v, xL + colW * i + colW / 2, y, { baseline: 'top', align: 'center' })
@@ -81,25 +82,25 @@ export function usePrintLabel() {
     doc.line(xL + colW * 2, tableTop, xL + colW * 2, tableBottom)
     y += 2
 
-    // ── Dates — labels 10pt, values 22pt bold ──
+    // ── Dates — labels 9pt, values 18pt bold ──
     const dColW = W / 2
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setTextColor(0)
     doc.text('FABRICAÇÃO', xL + dColW / 2, y, { baseline: 'top', align: 'center' })
     doc.text('VALIDADE', xL + dColW + dColW / 2, y, { baseline: 'top', align: 'center' })
     y += lh()
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(22)
+    doc.setFontSize(18)
     doc.text(fabricationText, xL + dColW / 2, y, { baseline: 'top', align: 'center' })
     doc.text(expirationText, xL + dColW + dColW / 2, y, { baseline: 'top', align: 'center' })
     y += lh() + 1
 
-    // ── Footer — 8pt gray ──
+    // ── Footer — 7pt gray ──
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
+    doc.setFontSize(7)
     doc.setTextColor(136, 136, 136)
     doc.text(`Impresso em ${printDate} às ${printTime}`, xC, y, { baseline: 'top', align: 'center' })
 
