@@ -48,8 +48,9 @@ export function useAuth() {
       console.log('[fetchProfile] Profile loaded, role:', profile.role)
       currentProfile.value = profile
       return profile
-    } catch (err) {
+    } catch (err: any) {
       console.error('[fetchProfile] Error:', err)
+      console.error('[fetchProfile] Server message:', err?.data?.message || err?.statusMessage || 'unknown')
       currentProfile.value = null
       return null
     }
