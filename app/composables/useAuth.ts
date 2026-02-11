@@ -11,12 +11,27 @@ export function useAuth() {
   })
 
   async function fetchProfile() {
-    if (!user.value?.id) return null
+    if (!user.value?.id) {
+      console.warn('[fetchProfile] No user.id, skipping')
+      return null
+    }
 
     try {
-      const profileData = await $fetch('/api/me')
+      // Get token from in-memory session (available immediately after signIn)
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      } else {
+        console.warn('[fetchProfile] No access_token in session')
+      }
+
+      console.log('[fetchProfile] Calling /api/me for user:', user.value.id)
+      const profileData = await $fetch('/api/me', { headers })
+      console.log('[fetchProfile] Response:', JSON.stringify(profileData))
 
       if (!profileData) {
+        console.warn('[fetchProfile] /api/me returned null')
         currentProfile.value = null
         return null
       }
@@ -32,9 +47,11 @@ export function useAuth() {
         units: { name: profileData.units?.name || '' }
       }
 
+      console.log('[fetchProfile] Profile loaded, role:', profile.role)
       currentProfile.value = profile
       return profile
-    } catch {
+    } catch (err) {
+      console.error('[fetchProfile] Error:', err)
       currentProfile.value = null
       return null
     }
