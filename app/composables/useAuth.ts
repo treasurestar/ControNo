@@ -13,49 +13,31 @@ export function useAuth() {
   async function fetchProfile() {
     if (!user.value?.id) return null
 
-    let profileData: any = null
+    try {
+      const profileData = await $fetch('/api/me')
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id,name,email,role,unit_id,approved')
-      .eq('id', user.value.id)
-      .maybeSingle()
+      if (!profileData) {
+        currentProfile.value = null
+        return null
+      }
 
-    if (error) {
-      // Fallback: try without approved column (in case it doesn't exist yet)
-      const { data: fallback } = await supabase
-        .from('profiles')
-        .select('id,name,email,role,unit_id')
-        .eq('id', user.value.id)
-        .maybeSingle()
-      profileData = fallback ? { ...fallback, approved: true } : null
-    } else {
-      profileData = data
+      const profile: Profile = {
+        id: profileData.id,
+        name: profileData.name || user.value.user_metadata?.name || 'Usuario',
+        email: profileData.email || user.value.email || '',
+        role: profileData.role || 'user',
+        approved: profileData.approved ?? true,
+        unit_id: profileData.unit_id || '',
+        created_at: profileData.created_at || '',
+        units: { name: profileData.units?.name || '' }
+      }
+
+      currentProfile.value = profile
+      return profile
+    } catch {
+      currentProfile.value = null
+      return null
     }
-
-    let unitName = ''
-    if (profileData?.unit_id) {
-      const { data: unitData } = await supabase
-        .from('units')
-        .select('name')
-        .eq('id', profileData.unit_id)
-        .maybeSingle()
-      unitName = unitData?.name || ''
-    }
-
-    const profile: Profile = {
-      id: user.value.id,
-      name: profileData?.name || user.value.user_metadata?.name || 'Usuario',
-      email: user.value.email || profileData?.email || '',
-      role: profileData?.role || 'user',
-      approved: profileData?.approved ?? false,
-      unit_id: profileData?.unit_id || '',
-      created_at: profileData?.created_at || '',
-      units: { name: unitName }
-    }
-
-    currentProfile.value = profile
-    return profile
   }
 
   async function login(email: string, password: string) {
