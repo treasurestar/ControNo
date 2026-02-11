@@ -30,9 +30,15 @@ export default defineEventHandler(async (event) => {
     process.env.SUPABASE_KEY!
   )
 
+  // Redirect to /confirm after email verification
+  const origin = getRequestURL(event).origin
+
   const { data, error } = await supabase.auth.signUp({
     email: email.toLowerCase().trim(),
-    password
+    password,
+    options: {
+      emailRedirectTo: `${origin}/confirm`
+    }
   })
 
   if (error) {
