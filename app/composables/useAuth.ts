@@ -11,22 +11,20 @@ export function useAuth() {
   })
 
   async function fetchProfile() {
-    if (!user.value?.id) {
-      console.warn('[fetchProfile] No user.id, skipping')
-      return null
-    }
-
     try {
-      // Get token from in-memory session (available immediately after signIn)
+      // Get session directly from Supabase client (in-memory, no cookie dependency)
       const { data: { session } } = await supabase.auth.getSession()
-      const headers: Record<string, string> = {}
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      } else {
-        console.warn('[fetchProfile] No access_token in session')
+
+      if (!session?.user?.id) {
+        console.warn('[fetchProfile] No session/user, skipping')
+        return null
       }
 
-      console.log('[fetchProfile] Calling /api/me for user:', user.value.id)
+      console.log('[fetchProfile] Session user:', session.user.id)
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+
       const profileData = await $fetch('/api/me', { headers })
       console.log('[fetchProfile] Response:', JSON.stringify(profileData))
 
@@ -38,8 +36,8 @@ export function useAuth() {
 
       const profile: Profile = {
         id: profileData.id,
-        name: profileData.name || user.value.user_metadata?.name || 'Usuario',
-        email: profileData.email || user.value.email || '',
+        name: profileData.name || session.user.user_metadata?.name || 'Usuario',
+        email: profileData.email || session.user.email || '',
         role: profileData.role || 'user',
         approved: profileData.approved ?? true,
         unit_id: profileData.unit_id || '',
