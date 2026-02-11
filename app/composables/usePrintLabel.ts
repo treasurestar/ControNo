@@ -2,10 +2,14 @@ import type { Product } from '~~/shared/types'
 
 export function usePrintLabel() {
   function printLabel(product: Product) {
+    const unitText = product.unidade || product.units?.name || '-'
     const weightText = product.weight || '-'
-    const unitText = product.unidade || '-'
     const responsibleText = product.responsible || '-'
     const ingredientsText = product.ingredients ? product.ingredients.toUpperCase() : '-'
+
+    const now = new Date()
+    const printDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
+    const printTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
     const iframe = document.createElement('iframe')
     iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;'
@@ -20,126 +24,143 @@ export function usePrintLabel() {
 <head>
 <style>
 @page {
-  size: 68mm 68mm landscape;
-  margin: 8mm 3mm 3mm 1mm;
+  size: 70mm 70mm;
+  margin: 3mm;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
   margin: 0;
   padding: 0;
+  width: 70mm;
+  height: 70mm;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.label {
   width: 100%;
   height: 100%;
-  overflow: hidden;
-}
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  line-height: 1.25;
-  max-height: 100%;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 2mm;
 }
 
 .product-name {
-  font-size: 18pt;
-  font-weight: 800;
+  font-size: 16pt;
+  font-weight: 900;
   text-transform: uppercase;
+  border-bottom: 0.5mm solid #000;
   padding-bottom: 1.5mm;
-  border-bottom: 0.4mm solid #000;
-  margin-bottom: 1.5mm;
+  margin-bottom: 1mm;
   word-wrap: break-word;
+  line-height: 1.1;
 }
 
 .ingredients {
-  font-size: 11pt;
-  line-height: 1.3;
-  padding: 1mm 0;
+  margin-bottom: 1.5mm;
+  line-height: 1.25;
+}
+.ingredients-label {
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.ingredients-text {
+  font-size: 9pt;
+  text-transform: uppercase;
   word-wrap: break-word;
 }
-.ingredients .lbl {
-  font-weight: 700;
-  font-size: 9.5pt;
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 0.5mm;
-}
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 2mm;
-  padding: 1.5mm 0;
-  border-top: 0.3mm solid #000;
-  border-bottom: 0.3mm solid #000;
-  margin-top: 1.5mm;
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 0.4mm solid #000;
+  border-bottom: 0.4mm solid #000;
+  margin-bottom: 2mm;
 }
-.info-row .item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  text-align: center;
-}
-.info-row .item-label {
-  font-size: 8pt;
-  text-transform: uppercase;
-  color: #444;
-}
-.info-row .item-value {
+.info-table th {
+  font-size: 7.5pt;
   font-weight: 700;
+  text-transform: uppercase;
+  color: #000;
+  padding: 0.8mm 1mm 0;
+  text-align: center;
+  border-right: 0.3mm solid #000;
+}
+.info-table th:last-child {
+  border-right: none;
+}
+.info-table td {
   font-size: 11pt;
-  margin-top: 0.3mm;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 1mm 1mm;
+  border-right: 0.3mm solid #000;
+}
+.info-table td:last-child {
+  border-right: none;
 }
 
 .dates {
   display: flex;
   justify-content: space-between;
-  padding: 1.5mm 0 0 0;
   gap: 4mm;
+  flex: 1;
 }
 .date-block {
   flex: 1;
   text-align: center;
 }
 .date-label {
-  font-size: 8.5pt;
+  font-size: 8pt;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #444;
+  letter-spacing: 0.3mm;
 }
 .date-value {
   font-size: 15pt;
-  font-weight: 800;
+  font-weight: 900;
 }
 
+.footer {
+  text-align: center;
+  font-size: 6.5pt;
+  color: #333;
+  margin-top: auto;
+  padding-top: 1mm;
+}
 </style>
 </head>
 <body>
-<div class="product-name">${product.name}</div>
-<div class="ingredients">
-  <span class="lbl">Ingredientes:</span>
-  ${ingredientsText}
-</div>
-<div class="info-row">
-  <div class="item">
-    <span class="item-label">Unidade</span>
-    <span class="item-value">${unitText}</span>
+<div class="label">
+  <div class="product-name">${product.name}</div>
+  <div class="ingredients">
+    <span class="ingredients-label">Ingredientes: </span>
+    <span class="ingredients-text">${ingredientsText}</span>
   </div>
-  <div class="item">
-    <span class="item-label">Peso</span>
-    <span class="item-value">${weightText}</span>
+  <table class="info-table">
+    <tr>
+      <th>Unidade</th>
+      <th>Peso</th>
+      <th>Resp.</th>
+    </tr>
+    <tr>
+      <td>${unitText}</td>
+      <td>${weightText}</td>
+      <td>${responsibleText}</td>
+    </tr>
+  </table>
+  <div class="dates">
+    <div class="date-block">
+      <div class="date-label">Fabricação</div>
+      <div class="date-value">${formatDateToBR(product.fabrication)}</div>
+    </div>
+    <div class="date-block">
+      <div class="date-label">Validade</div>
+      <div class="date-value">${formatDateToBR(product.expiration)}</div>
+    </div>
   </div>
-  <div class="item">
-    <span class="item-label">Resp.</span>
-    <span class="item-value">${responsibleText}</span>
-  </div>
-</div>
-<div class="dates">
-  <div class="date-block">
-    <div class="date-label">Fabricação</div>
-    <div class="date-value">${formatDateToBR(product.fabrication)}</div>
-  </div>
-  <div class="date-block">
-    <div class="date-label">Validade</div>
-    <div class="date-value">${formatDateToBR(product.expiration)}</div>
-  </div>
+  <div class="footer">Impresso em ${printDate} às ${printTime}</div>
 </div>
 </body>
 </html>`)
