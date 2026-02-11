@@ -8,8 +8,8 @@ export function getProductStatus(expirationDate: string): ProductStatus {
   const diffTime = expDate.getTime() - today.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-  if (diffDays < 0) return 'vencido'
-  if (diffDays <= 5) return 'vencendo'
+  if (diffDays <= 0) return 'vencido'
+  if (diffDays <= 7) return 'vencendo'
   return 'ok'
 }
 
