@@ -12,7 +12,7 @@ export function useAuth() {
 
   async function fetchProfile() {
     try {
-      // Get session directly from Supabase client (in-memory, no cookie dependency)
+      // Get session from Supabase client (handles token refresh automatically)
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user?.id) {
@@ -20,16 +20,37 @@ export function useAuth() {
         return null
       }
 
-      console.log('[fetchProfile] Session user:', session.user.id)
-      const headers: Record<string, string> = {
-        'Authorization': `Bearer ${session.access_token}`
+      console.log('[fetchProfile] Querying profile for:', session.user.id)
+
+      // Query profile directly via Supabase client (uses RLS, no server endpoint needed)
+      let profileData: any = null
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id,name,email,role,unit_id,approved,units(name)')
+        .eq('id', session.user.id)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('[fetchProfile] Query failed:', error.message, '- retrying without approved')
+        // Fallback: approved column might not exist
+        const { data: fallback, error: fallbackErr } = await supabase
+          .from('profiles')
+          .select('id,name,email,role,unit_id,units(name)')
+          .eq('id', session.user.id)
+          .maybeSingle()
+        if (fallbackErr || !fallback) {
+          console.error('[fetchProfile] Fallback also failed:', fallbackErr?.message)
+          currentProfile.value = null
+          return null
+        }
+        profileData = { ...fallback, approved: true }
+      } else {
+        profileData = data
       }
 
-      const profileData = await $fetch('/api/me', { headers })
-      console.log('[fetchProfile] Response:', JSON.stringify(profileData))
-
       if (!profileData) {
-        console.warn('[fetchProfile] /api/me returned null')
+        console.warn('[fetchProfile] No profile found')
         currentProfile.value = null
         return null
       }
@@ -45,12 +66,11 @@ export function useAuth() {
         units: { name: profileData.units?.name || '' }
       }
 
-      console.log('[fetchProfile] Profile loaded, role:', profile.role)
+      console.log('[fetchProfile] Profile loaded, role:', profile.role, 'approved:', profile.approved)
       currentProfile.value = profile
       return profile
     } catch (err: any) {
       console.error('[fetchProfile] Error:', err)
-      console.error('[fetchProfile] Server message:', err?.data?.message || err?.statusMessage || 'unknown')
       currentProfile.value = null
       return null
     }
