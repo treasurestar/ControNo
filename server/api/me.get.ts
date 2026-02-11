@@ -4,15 +4,17 @@ import { serverSupabaseUser } from '#supabase/server'
 export default defineEventHandler(async (event) => {
   try {
     // 1. Authenticate user: try cookies first, then Authorization header
-    let user = null
+    let userId: string | null = null
+
     try {
-      user = await serverSupabaseUser(event)
-      console.log('[/api/me] Cookie auth OK:', user?.id)
+      const cookieUser = await serverSupabaseUser(event)
+      userId = cookieUser?.id || null
+      console.log('[/api/me] Cookie auth:', userId ? `OK ${userId}` : 'no id')
     } catch {
       console.log('[/api/me] Cookie auth failed, trying header...')
     }
 
-    if (!user) {
+    if (!userId) {
       const authHeader = getHeader(event, 'authorization')
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7)
@@ -20,13 +22,13 @@ export default defineEventHandler(async (event) => {
         if (tokenError) {
           console.error('[/api/me] Token auth failed:', tokenError.message)
         } else {
-          user = data.user
-          console.log('[/api/me] Token auth OK:', user?.id)
+          userId = data.user?.id || null
+          console.log('[/api/me] Token auth:', userId ? `OK ${userId}` : 'no id')
         }
       }
     }
 
-    if (!user) {
+    if (!userId) {
       throw createError({ statusCode: 401, message: 'Não autenticado' })
     }
 
@@ -34,7 +36,7 @@ export default defineEventHandler(async (event) => {
     let { data, error } = await supabaseAdmin
       .from('profiles')
       .select('id,name,email,role,unit_id,approved,units(name)')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle()
 
     if (error) {
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event) => {
       const result = await supabaseAdmin
         .from('profiles')
         .select('id,name,email,role,unit_id,units(name)')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle()
       if (result.error) {
         console.error('[/api/me] Profile query failed:', result.error.message)
