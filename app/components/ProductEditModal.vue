@@ -28,7 +28,13 @@
 
         <div class="mb-5">
           <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Peso</label>
-          <input v-model="form.weight" type="text" class="form-input" placeholder="Ex: 1,2 kg" />
+          <div class="flex gap-2">
+            <input v-model="form.weight" type="text" class="form-input flex-1" placeholder="Ex: 500" />
+            <select v-model="form.weightUnit" class="form-input w-20">
+              <option value="kg">KG</option>
+              <option value="g">G</option>
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4 mb-5 max-sm:grid-cols-1">
@@ -68,17 +74,20 @@ const form = ref({
   ingredients: '',
   responsible: '',
   weight: '',
+  weightUnit: 'kg',
   fabrication: '',
   expiration: ''
 })
 
 watch(() => props.product, (p) => {
   if (p) {
+    const match = p.weight?.match(/^([\d.,]+)\s*(kg|g)?$/i)
     form.value = {
       name: p.name,
       ingredients: p.ingredients || '',
       responsible: p.responsible || '',
-      weight: p.weight || '',
+      weight: match ? match[1] : p.weight || '',
+      weightUnit: match?.[2]?.toLowerCase() === 'g' ? 'g' : 'kg',
       fabrication: p.fabrication,
       expiration: p.expiration
     }
@@ -100,7 +109,7 @@ async function handleSubmit() {
       name: form.value.name.toUpperCase(),
       ingredients: form.value.ingredients,
       responsible: form.value.responsible,
-      weight: form.value.weight,
+      weight: form.value.weight ? `${form.value.weight}${form.value.weightUnit.toUpperCase()}` : '',
       fabrication: form.value.fabrication,
       expiration: form.value.expiration
     })
