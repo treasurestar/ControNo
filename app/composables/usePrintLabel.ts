@@ -1,10 +1,31 @@
 import type { Product } from '~~/shared/types'
 
+// Estado compartilhado (module-level)
+const showPrintConfirm = ref(false)
+const pendingProduct = ref<Product | null>(null)
+
 export function usePrintLabel() {
-  function printLabel(product: Product) {
+  function requestPrint(product: Product) {
+    pendingProduct.value = product
+    showPrintConfirm.value = true
+  }
+
+  function confirmPrint(responsible: string) {
+    if (!pendingProduct.value) return
+    printLabel(pendingProduct.value, responsible)
+    showPrintConfirm.value = false
+    pendingProduct.value = null
+  }
+
+  function cancelPrint() {
+    showPrintConfirm.value = false
+    pendingProduct.value = null
+  }
+
+  function printLabel(product: Product, responsibleOverride?: string) {
     const unitText = product.unidade || product.units?.name || '-'
     const weightText = product.weight || '-'
-    const responsibleText = product.responsible || '-'
+    const responsibleText = responsibleOverride || product.responsible || '-'
     const ingredientsText = product.ingredients ? product.ingredients.toUpperCase() : '-'
 
     const iframe = document.createElement('iframe')
@@ -159,5 +180,5 @@ html, body {
     }, 250)
   }
 
-  return { printLabel }
+  return { printLabel, requestPrint, confirmPrint, cancelPrint, showPrintConfirm, pendingProduct }
 }

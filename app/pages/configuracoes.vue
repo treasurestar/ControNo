@@ -360,7 +360,7 @@ definePageMeta({
 const supabase = useSupabaseClient()
 const { fetchProfile } = useAuth()
 const { units, fetchUnits, getUnitIdByName, addUnit, deleteUnit } = useUnits()
-const { printLabel } = usePrintLabel()
+const { requestPrint } = usePrintLabel()
 
 const ADMIN_EMAIL = 'admin@controno.com.br'
 
@@ -560,7 +560,7 @@ function openUnitEdit(product: Product) {
 }
 
 function handlePrintUnit(product: Product) {
-  printLabel(product)
+  requestPrint(product)
 }
 
 async function handleDeleteUnitProduct(product: Product) {

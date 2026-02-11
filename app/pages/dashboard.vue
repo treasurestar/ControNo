@@ -123,7 +123,7 @@ definePageMeta({
 const { currentProfile, isAdmin, fetchProfile } = useAuth()
 const { products, fetchProducts, deleteProduct, stats, filteredProducts } = useProducts()
 const { selectedUnitId } = useUnits()
-const { printLabel } = usePrintLabel()
+const { requestPrint } = usePrintLabel()
 
 const searchTerm = ref('')
 const currentView = ref<ViewMode>('cards')
@@ -190,7 +190,7 @@ function openEdit(product: Product) {
 }
 
 function handlePrint(product: Product) {
-  printLabel(product)
+  requestPrint(product)
 }
 
 async function handleDelete(product: Product) {

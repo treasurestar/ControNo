@@ -101,7 +101,7 @@ const status = computed(() => (route.params.status as string) || 'total')
 const { currentProfile, isAdmin, fetchProfile } = useAuth()
 const { products, fetchProducts, deleteProduct } = useProducts()
 const { selectedUnitId } = useUnits()
-const { printLabel } = usePrintLabel()
+const { requestPrint } = usePrintLabel()
 
 const searchTerm = ref('')
 const currentView = ref<ViewMode>('cards')
@@ -183,7 +183,7 @@ function openEdit(product: Product) {
 }
 
 function handlePrint(product: Product) {
-  printLabel(product)
+  requestPrint(product)
 }
 
 async function handleDelete(product: Product) {

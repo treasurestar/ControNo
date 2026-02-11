@@ -22,11 +22,6 @@
         </div>
 
         <div class="mb-5">
-          <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Responsável</label>
-          <input v-model="form.responsible" type="text" class="form-input" placeholder="Ex: Nome do responsável" />
-        </div>
-
-        <div class="mb-5">
           <label class="block mb-2 text-sm font-medium" style="color: var(--text-primary);">Peso</label>
           <div class="flex gap-2">
             <input v-model="form.weight" type="text" class="form-input flex-1" placeholder="Ex: 500" />
@@ -72,7 +67,6 @@ const loading = ref(false)
 const form = ref({
   name: '',
   ingredients: '',
-  responsible: '',
   weight: '',
   weightUnit: 'kg',
   fabrication: '',
@@ -85,7 +79,6 @@ watch(() => props.product, (p) => {
     form.value = {
       name: p.name,
       ingredients: p.ingredients || '',
-      responsible: p.responsible || '',
       weight: match ? match[1] : p.weight || '',
       weightUnit: match?.[2]?.toLowerCase() === 'g' ? 'g' : 'kg',
       fabrication: p.fabrication,
@@ -108,7 +101,6 @@ async function handleSubmit() {
     await updateProduct(props.product.id, {
       name: form.value.name.toUpperCase(),
       ingredients: form.value.ingredients,
-      responsible: form.value.responsible,
       weight: form.value.weight ? `${form.value.weight}${form.value.weightUnit.toUpperCase()}` : '',
       fabrication: form.value.fabrication,
       expiration: form.value.expiration
@@ -124,7 +116,7 @@ async function handleSubmit() {
 
 function handlePrint() {
   if (!props.product) return
-  const { printLabel } = usePrintLabel()
-  printLabel(props.product)
+  const { requestPrint } = usePrintLabel()
+  requestPrint(props.product)
 }
 </script>
