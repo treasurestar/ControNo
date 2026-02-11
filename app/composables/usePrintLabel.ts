@@ -1,54 +1,8 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  AlignmentType,
-  BorderStyle,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
-  VerticalAlign,
-} from 'docx'
+import jsPDF from 'jspdf'
 import type { Product } from '~~/shared/types'
 
-const mm = (val: number) => Math.round(val * 56.7)
-
-function createInfoCell(
-  text: string,
-  size: number,
-  options: { bold?: boolean; color?: string; allCaps?: boolean } = {},
-): TableCell {
-  return new TableCell({
-    verticalAlign: VerticalAlign.CENTER,
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-    },
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 0, after: 0 },
-        children: [
-          new TextRun({
-            text,
-            bold: options.bold ?? false,
-            size,
-            font: 'Arial',
-            color: options.color ?? '000000',
-            allCaps: options.allCaps ?? false,
-          }),
-        ],
-      }),
-    ],
-  })
-}
-
 export function usePrintLabel() {
-  async function printLabel(product: Product) {
+  function printLabel(product: Product) {
     const unitText = product.unidade || product.units?.name || '-'
     const weightText = product.weight || '-'
     const responsibleText = product.responsible || '-'
@@ -60,134 +14,98 @@ export function usePrintLabel() {
     const printDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`
     const printTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-    const doc = new Document({
-      sections: [
-        {
-          properties: {
-            page: {
-              size: { width: mm(70), height: mm(70) },
-              margin: {
-                top: mm(3),
-                left: mm(2),
-                bottom: mm(2),
-                right: mm(2),
-              },
-            },
-          },
-          children: [
-            // Product name
-            new Paragraph({
-              alignment: AlignmentType.LEFT,
-              spacing: { after: mm(1) },
-              border: {
-                bottom: { style: BorderStyle.SINGLE, size: 2, color: '000000' },
-              },
-              children: [
-                new TextRun({
-                  text: product.name.toUpperCase(),
-                  bold: true,
-                  size: 48,
-                  font: 'Arial',
-                }),
-              ],
-            }),
+    // Page: 70x70mm, margins: top 3mm, left/right 2mm, bottom 2mm
+    const doc = new jsPDF({ unit: 'mm', format: [70, 70] })
+    const xL = 2, xR = 68, W = 66, xC = 35
+    let y = 3
 
-            // Ingredients label + text
-            new Paragraph({
-              spacing: { before: mm(0.5), after: mm(1) },
-              children: [
-                new TextRun({
-                  text: 'INGREDIENTES: ',
-                  bold: true,
-                  size: 24,
-                  font: 'Arial',
-                }),
-                new TextRun({
-                  text: ingredientsText,
-                  size: 24,
-                  font: 'Arial',
-                }),
-              ],
-            }),
+    const lh = () => doc.getLineHeight() / doc.internal.scaleFactor
 
-            // Info table: Unidade | Peso | Resp.
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
-                bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: '000000' },
-                insideHorizontal: { style: BorderStyle.NONE },
-              },
-              rows: [
-                new TableRow({
-                  children: [
-                    createInfoCell('UNIDADE', 20, { allCaps: true }),
-                    createInfoCell('PESO', 20, { allCaps: true }),
-                    createInfoCell('RESP.', 20, { allCaps: true }),
-                  ],
-                }),
-                new TableRow({
-                  children: [
-                    createInfoCell(unitText, 28, { bold: true }),
-                    createInfoCell(weightText, 28, { bold: true }),
-                    createInfoCell(responsibleText, 28, { bold: true }),
-                  ],
-                }),
-              ],
-            }),
+    // ── Product Name — 24pt bold ──
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(24)
+    doc.setTextColor(0)
+    const nameLines = doc.splitTextToSize(product.name.toUpperCase(), W)
+    doc.text(nameLines, xL, y, { baseline: 'top' })
+    y += lh() * nameLines.length + 0.5
 
-            // Spacer
-            new Paragraph({ spacing: { before: mm(1) }, children: [] }),
+    // Bottom border
+    doc.setDrawColor(0)
+    doc.setLineWidth(0.3)
+    doc.line(xL, y, xR, y)
+    y += 1.5
 
-            // Dates table: Fabricação | Validade
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-                insideVertical: { style: BorderStyle.NONE },
-                insideHorizontal: { style: BorderStyle.NONE },
-              },
-              rows: [
-                new TableRow({
-                  children: [
-                    createInfoCell('FABRICAÇÃO', 20, { allCaps: true }),
-                    createInfoCell('VALIDADE', 20, { allCaps: true }),
-                  ],
-                }),
-                new TableRow({
-                  children: [
-                    createInfoCell(fabricationText, 44, { bold: true }),
-                    createInfoCell(expirationText, 44, { bold: true }),
-                  ],
-                }),
-              ],
-            }),
+    // ── Ingredients — 12pt (bold label + normal text inline) ──
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(12)
+    const ingFull = 'INGREDIENTES: ' + ingredientsText
+    const ingLines = doc.splitTextToSize(ingFull, W)
+    doc.text(ingLines, xL, y, { baseline: 'top' })
+    // Overdraw label in bold on first line
+    doc.setFont('helvetica', 'bold')
+    doc.text('INGREDIENTES: ', xL, y, { baseline: 'top' })
+    y += lh() * ingLines.length + 1.5
 
-            // Footer
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              spacing: { before: mm(1) },
-              children: [
-                new TextRun({
-                  text: `Impresso em ${printDate} às ${printTime}`,
-                  size: 16,
-                  font: 'Arial',
-                  color: '888888',
-                }),
-              ],
-            }),
-          ],
-        },
-      ],
+    // ── Info Table — headers 10pt, values 14pt bold ──
+    const colW = W / 3
+    doc.setDrawColor(0)
+    doc.setLineWidth(0.2)
+    const tableTop = y
+    doc.line(xL, tableTop, xR, tableTop)
+    y += 0.8
+
+    // Headers
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    const headers = ['UNIDADE', 'PESO', 'RESP.']
+    headers.forEach((h, i) => {
+      doc.text(h, xL + colW * i + colW / 2, y, { baseline: 'top', align: 'center' })
     })
+    y += lh()
 
-    const blob = await Packer.toBlob(doc)
+    // Values
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    const values = [unitText, weightText, responsibleText]
+    values.forEach((v, i) => {
+      doc.text(v, xL + colW * i + colW / 2, y, { baseline: 'top', align: 'center' })
+    })
+    y += lh() + 0.8
+
+    // Bottom border + vertical dividers
+    const tableBottom = y
+    doc.setLineWidth(0.2)
+    doc.line(xL, tableBottom, xR, tableBottom)
+    doc.line(xL + colW, tableTop, xL + colW, tableBottom)
+    doc.line(xL + colW * 2, tableTop, xL + colW * 2, tableBottom)
+    y += 2
+
+    // ── Dates — labels 10pt, values 22pt bold ──
+    const dColW = W / 2
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.text('FABRICAÇÃO', xL + dColW / 2, y, { baseline: 'top', align: 'center' })
+    doc.text('VALIDADE', xL + dColW + dColW / 2, y, { baseline: 'top', align: 'center' })
+    y += lh()
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(22)
+    doc.text(fabricationText, xL + dColW / 2, y, { baseline: 'top', align: 'center' })
+    doc.text(expirationText, xL + dColW + dColW / 2, y, { baseline: 'top', align: 'center' })
+    y += lh() + 1
+
+    // ── Footer — 8pt gray ──
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(136, 136, 136)
+    doc.text(`Impresso em ${printDate} às ${printTime}`, xC, y, { baseline: 'top', align: 'center' })
+
+    // ── Download PDF + auto-print ──
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
 
     const safeName = product.name
       .toLowerCase()
@@ -196,14 +114,30 @@ export function usePrintLabel() {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
 
-    const url = URL.createObjectURL(blob)
+    // Download
     const a = document.createElement('a')
-    a.href = url
-    a.download = `etiqueta-${safeName}.docx`
+    a.href = pdfUrl
+    a.download = `etiqueta-${safeName}.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+
+    // Auto-print via iframe
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;'
+    iframe.src = pdfUrl
+    document.body.appendChild(iframe)
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+        setTimeout(() => {
+          document.body.removeChild(iframe)
+          URL.revokeObjectURL(pdfUrl)
+        }, 1000)
+      }, 100)
+    }
   }
 
   return { printLabel }
