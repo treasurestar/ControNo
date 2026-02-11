@@ -60,6 +60,10 @@
         </button>
       </form>
 
+      <p class="text-center mt-5 text-sm" style="color: var(--text-secondary);">
+        Não tem conta?
+        <NuxtLink to="/cadastro" class="font-medium no-underline" style="color: var(--accent-color);">Criar conta</NuxtLink>
+      </p>
     </div>
 
     <p class="mt-7 text-[13px]" style="color: var(--text-secondary);">Sistema de Controle de Validade</p>

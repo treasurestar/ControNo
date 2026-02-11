@@ -23,6 +23,55 @@
       </div>
     </div>
 
+    <!-- Approval Tab -->
+    <div v-if="activeTab === 'approval'" class="flex flex-col gap-4">
+      <div class="card">
+        <div class="flex items-center justify-between gap-4 mb-3 flex-wrap">
+          <h3 class="font-semibold" style="color: var(--text-primary);">Usuários aguardando aprovação</h3>
+          <span class="text-[13px]" style="color: var(--text-secondary);">{{ pendingUsers.length }} pendente(s)</span>
+        </div>
+
+        <div class="w-full overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Unidade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="u in pendingUsers" :key="u.id">
+                <td>{{ u.name || '-' }}</td>
+                <td>{{ u.email || '-' }}</td>
+                <td>{{ u.units?.name || '-' }}</td>
+                <td class="flex gap-2">
+                  <button
+                    class="py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-colors text-white"
+                    style="background-color: var(--ok-color); border: none;"
+                    @click="handleApprove(u)"
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    class="py-1.5 px-3 rounded text-xs font-medium cursor-pointer transition-colors text-white"
+                    style="background-color: var(--vencido-color); border: none;"
+                    @click="handleReject(u)"
+                  >
+                    Recusar
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="pendingUsers.length === 0">
+                <td colspan="4" class="text-[13px]" style="color: var(--text-secondary);">Nenhum usuário pendente de aprovação.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Users Tab -->
     <div v-if="activeTab === 'users'" class="flex flex-col gap-4">
       <UserForm @created="loadUsers" />
@@ -315,13 +364,18 @@ const { printLabel } = usePrintLabel()
 
 const ADMIN_EMAIL = 'admin@controno.com.br'
 
-const tabs = [
-  { id: 'users', label: 'Usuários' },
-{ id: 'units', label: 'Unidades' },
-  { id: 'reports', label: 'Relatórios' }
-]
+const pendingUsers = computed(() =>
+  users.value.filter(u => !u.approved && u.role !== 'admin')
+)
 
-const activeTab = ref('users')
+const tabs = computed(() => [
+  { id: 'approval', label: `Aprovação${pendingUsers.value.length ? ` (${pendingUsers.value.length})` : ''}` },
+  { id: 'users', label: 'Usuários' },
+  { id: 'units', label: 'Unidades' },
+  { id: 'reports', label: 'Relatórios' }
+])
+
+const activeTab = ref('approval')
 const users = ref<Profile[]>([])
 const unitProducts = ref<Product[]>([])
 const unitProductSearch = ref('')
@@ -429,6 +483,25 @@ async function handleDeleteUnit(unit: { id: string; name: string }) {
 
 function isUserAdmin(u: Profile) {
   return u.role === 'admin' || u.email === ADMIN_EMAIL
+}
+
+async function handleApprove(u: Profile) {
+  try {
+    await $fetch(`/api/admin/profiles/${u.id}/approve`, { method: 'PATCH' })
+    await loadUsers()
+  } catch (e: any) {
+    alert(e.data?.message || e.message || 'Erro ao aprovar usuário.')
+  }
+}
+
+async function handleReject(u: Profile) {
+  if (!confirm(`Deseja recusar e excluir o cadastro de "${u.name || u.email}"?`)) return
+  try {
+    await $fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' })
+    await loadUsers()
+  } catch (e: any) {
+    alert(e.data?.message || e.message || 'Erro ao recusar usuário.')
+  }
 }
 
 async function loadUsers() {
