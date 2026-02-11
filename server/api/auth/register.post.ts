@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from '~~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -23,11 +24,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Unidade inválida.' })
   }
 
-  // Create auth user (email_confirm: false = Supabase sends confirmation email)
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  // Use regular client (anon key) so Supabase sends confirmation email via SMTP
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!
+  )
+
+  const { data, error } = await supabase.auth.signUp({
     email: email.toLowerCase().trim(),
-    password,
-    email_confirm: false
+    password
   })
 
   if (error) {
@@ -37,7 +42,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: msg })
   }
 
+  if (!data.user) {
+    throw createError({ statusCode: 400, message: 'Erro ao criar usuário.' })
+  }
+
   // Update profile with name, unit, and approved: false
+  // (trigger handle_new_user already created the profile row)
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
     .update({
